@@ -4,5 +4,4 @@ high = root + "high";
 background = root + "background/20241011";
 
 
-
-gen_audio_from_detections_AR(high, background, audio_duration=3)
+gen_audio_from_detections(high, background, audio_duration=3)
