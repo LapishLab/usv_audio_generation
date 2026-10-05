@@ -10,7 +10,7 @@ function allCalls = load_calls(folder)
     for i=1:length(matfiles)
         d = load(fullfile(folder,matfiles{i}));
         d.Calls.audio_file(:) = d.audiodata.Filename;
-        d.Calls.detection_file(:) = string(matfiles{i});
+        d.Calls.detection_file(:) = fullfile(folder, string(matfiles{i}));
         allCalls = cat(1, allCalls,d.Calls);
     end
 end
