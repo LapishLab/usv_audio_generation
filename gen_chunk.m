@@ -40,7 +40,7 @@ rand_back = rand_back(1:ceil(background_duration*fs)); % restrict the full backg
 % TODO: This is completely random cutting. We might want to allow for
 % linear (more even) or bursty (less even) cutting.
 cut_inds = randperm(length(rand_back), height(chosen_usv)-1);
-cut_inds = [0, cut_inds, height(chosen_usv)]; % add the first and last indices as cut inds
+cut_inds = [0, cut_inds, height(rand_back)]; % add the first and last indices as cut inds
 cut_inds = sort(cut_inds);
 
 for i=1:length(cut_inds)-1
