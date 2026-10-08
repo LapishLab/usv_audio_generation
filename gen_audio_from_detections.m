@@ -9,6 +9,7 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
         opts.target_max_usv_proportion double = 0.9; % MUST BE HIGHER THAN target_usv_proportion; Maximum proportion that individual USV should make up of usv+background pairing
         opts.audio_file_name {mustBeTextScalar} = 'combined_audio.wav' % Output file name (placed in USV_folder)
         opts.rand_scale double = 0.5; % How much random scaling to apply to gaps between USVs
+        opts.audio_file_save {mustBeTextScalar} = USV_folder %where the audio file is saved
         opts.make_plots logical = false; % Should I make rate plots?
     end
 
@@ -54,7 +55,7 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
     all = cat(1, full_usv, full_back);
     all = cat(1, all{:});
 
-    audio_path = fullfile(USV_folder, opts.audio_file_name);
+    audio_path = fullfile(opts.audio_file_save, opts.audio_file_name);
     audiowrite(audio_path, all, fs);
     fprintf('Audio saved: %s\n', audio_path)
 
