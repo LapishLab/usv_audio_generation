@@ -11,6 +11,7 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
         opts.rand_scale double = 0.5; % How much random scaling to apply to gaps between USVs
         opts.audio_file_save {mustBeTextScalar} = USV_folder %where the audio file is saved
         opts.make_plots logical = false; % Should I make rate plots?
+        opts.decreasing_shape logical = true; %if true, USV rate starts high and decreases
     end
 
     rng(0);
@@ -24,6 +25,11 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
     avg_background_dur = avg_usv_dur/opts.target_usv_proportion - avg_usv_dur;
     n_calls = ceil(opts.audio_duration/(avg_usv_dur+avg_background_dur));
     x = linspace(0,1,n_calls).^opts.rate_power_scaling;
+
+    if ~opts.decreasing_shape
+        x = fliplr(x); % large gaps first (slow rate), small gaps last (fast rate)
+    end
+
     background_dur = x * avg_background_dur / mean(x);
 
     % Add a small baseline gap and normalize the mean duration.
