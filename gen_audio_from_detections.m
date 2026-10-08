@@ -6,6 +6,7 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
         opts.audio_duration double = 35*60; % Duration of audio in seconds
         opts.target_usv_proportion double = 0.2; % Proportion of full audio that should be USVs
         opts.rate_power_scaling double = 0.4; % Power scaling applied to linear increase gaps between USVs
+        opts.target_max_usv_proportion double = 0.9; % MUST BE HIGHER THAN target_usv_proportion; Maximum proportion that individual USV should make up of usv+background pairing
         opts.audio_file_name {mustBeTextScalar} = 'combined_audio.wav' % Output file name (placed in USV_folder)
         opts.rand_scale double = 0.5; % How much random scaling to apply to gaps between USVs
         opts.make_plots logical = false; % Should I make rate plots?
@@ -23,6 +24,10 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
     n_calls = ceil(opts.audio_duration/(avg_usv_dur+avg_background_dur));
     x = linspace(0,1,n_calls).^opts.rate_power_scaling;
     background_dur = x * avg_background_dur / mean(x);
+
+    % Add a small baseline gap and normalize the mean duration.
+    background_dur = background_dur + (1-opts.target_max_usv_proportion);
+    background_dur = background_dur / mean(background_dur) * avg_background_dur;
     
     rand_scale = 1+randn(size(background_dur))*opts.rand_scale;
     rand_scale(rand_scale<0) = 0;
