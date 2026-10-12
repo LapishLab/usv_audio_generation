@@ -16,8 +16,10 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
 
     rng(0);
 
-    usv = load_call_snippets(USV_folder);
-    background = load_call_snippets(background_folder);
+    [usv_t, usv] = load_call_snippets(USV_folder);
+    [~, background] = load_call_snippets(background_folder);
+
+    metadata = table();
 
     % calculator background durations
     fs = audioinfo(load_calls(USV_folder).file(1)).SampleRate;
@@ -34,11 +36,12 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
 
     % Add a small baseline gap and normalize the mean duration.
     background_dur = background_dur + (1-opts.target_max_usv_proportion);
-    background_dur = background_dur / mean(background_dur) * avg_background_dur;
     
     rand_scale = 1+randn(size(background_dur))*opts.rand_scale;
     rand_scale(rand_scale<0) = 0;
     background_dur = rand_scale .* background_dur;
+    background_dur = background_dur / mean(background_dur) * avg_background_dur;
+
 
     % collect random backgrounds
     rand_back = cat(1, background{randperm(length(background))});
@@ -54,16 +57,31 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
     % get USVs
     n_repeats = ceil(n_calls / length(usv));
     full_usv = cell(length(usv), n_repeats);
+    usv_idx  = zeros(length(usv), n_repeats);
     for i=1:n_repeats
-        full_usv(randperm(length(usv)), i) = usv;
+        usv_loc = randperm(length(usv));
+        full_usv(usv_loc, i) = usv;
+        usv_idx(usv_loc, i)  = 1:length(usv);   % contains indexes for the calls 
     end
     full_usv = full_usv(1:n_calls); % reshape into 1D and shrink to expected size
+    usv_idx = usv_idx(1:n_calls); %reshape call info table into 1D and shrink to expected size
     all = cat(1, full_usv, full_back);
     all = cat(1, all{:});
 
-    audio_path = fullfile(opts.audio_file_save, opts.audio_file_name);
+    %calculate length of each section 
+    background_length = cellfun(@length, full_back(:)) / fs;
+    usv_length = cellfun(@length, full_usv(:)) / fs;
+
+    audio_path = fullfile(opts.audio_file_save, opts.audio_file_name + ".wav");
     audiowrite(audio_path, all, fs);
     fprintf('Audio saved: %s\n', audio_path)
+
+    metadata = usv_t(usv_idx(:), :); %concat USV data information on top of each other. table is organized by how the calls are present in the file 
+    metadata.background_duration = background_length; %save length of background after each squeak 
+    metadata.usv_duration = usv_length; %save length of background after each squeak 
+
+    metadata_pat = fullfile(opts.audio_file_save, opts.audio_file_name + "_squeak_info.mat");
+    save(metadata_pat,'metadata');
 
     if  opts.make_plots
         %% Plotting USV ON proportion and rate
@@ -112,10 +130,12 @@ function gen_audio_from_detections(USV_folder, background_folder, opts)
     end
 end
 
-function audio = load_call_snippets(folder)
+function [calls_t, audio] = load_call_snippets(folder)
     arguments
         folder string = pwd() % Path to folder containing detection files
     end
+
+    calls_t = {};
 
     calls = load_calls(folder);
     audio = cell(height(calls),1);
@@ -137,6 +157,9 @@ function audio = load_call_snippets(folder)
         stop = sum(calls.Box(i,[1,3]));
         audio{i} = current_audio(round(start*fs) : round(stop*fs));
     end
+    %save call table with call identifying information 
+    calls.usv_duration = calls.Box(:,3);
+    calls_t = calls(:, {'Box', 'file', 'usv_duration'});
 end
 
 function allCalls = load_calls(folder)
