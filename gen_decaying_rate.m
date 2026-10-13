@@ -20,6 +20,8 @@ end
         rate = fliplr(rate);
     end
     
+    % Apply reproducible multiplicative random variation to the rate.
+    rng(0);
     mult = 1000;
     range = [1-opts.rand_scale, 1+opts.rand_scale] * mult;
     rand_scale = randi(range, [numel(t_ms), 1]) / mult;
