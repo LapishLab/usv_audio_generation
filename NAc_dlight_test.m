@@ -5,44 +5,69 @@ background = root + "background/20241011";
 gen_audio_folder = "/datastar/annaRemes/NAc_dlight/playback_audio/";
 file_name = "happy_NAc_dlight_test";
 
+%% Generate the rate shape of the audio
+rand_scale = 0;
+baseline_rate = 4.5;
+
+[rate1, sr] = gen_decaying_rate( ...
+    audio_duration = 3 * 60, ...
+    baseline_rate = baseline_rate, ...
+    time_constant = 1 * 60, ...
+    decay_time_flipped =true, ...
+    rand_scale = rand_scale ...
+    );
+
+rate2 = gen_decaying_rate( ...
+    audio_duration = 5 * 60, ...
+    baseline_rate = baseline_rate, ...
+    time_constant = 0, ...
+    decay_time_flipped = false, ...
+    rand_scale = rand_scale ...
+    );
+
+rate3 = gen_decaying_rate( ...
+    audio_duration = 3 * 60, ...
+    baseline_rate = baseline_rate, ...
+    time_constant = 15 * 60, ...
+    decay_time_flipped = false, ...
+    rand_scale = rand_scale ...
+    );
 
 
 
-gen_audio_from_detections(high, background, audio_file_save = gen_audio_folder, ...
-    make_plots=true, decreasing_shape=true,audio_file_name='happy_test_end')
+rate = [rate1; rate2; rate3];
+t = linspace(0, numel(rate)/sr, numel(rate));
 
-%% combine audio files 
-% 3 minute start, 38 minute end 
-start_audio_name = "happy_test_start";
-end_audio_name = "happy_test_end";
+figure(1)
+plot(t,rate)
+xlabel('Time (s)')
+ylabel('USV rate (Hz)')
 
-%load audio if needed
-[audio_start, fs1] = audioread(fullfile(gen_audio_folder, start_audio_name + '.wav'));
-[audio_end, fs2] = audioread(fullfile(gen_audio_folder, end_audio_name + '.wav'));
 
-% Sample rates must match
-if fs1 ~= fs2
-    audio_end = resample(audio_end, fs1, fs2);
+%% Generate audio using this rate shape
+fname = fullfile(gen_audio_folder,'happy_test_end');
+[audio, fs, metadata] = gen_audio_from_detections(high, background, rate);
+
+%% Save sync signal
+fprintf("Minnimum TTL duration should be at least 10 ms, probably better to be >50 ms \n")
+fprintf("min duration of usv = %f ms \n", 1e3*min(metadata.usv_duration))
+fprintf("min duration of whole usv+block = %f ms \n", 1e3*min(metadata.usv_duration+metadata.background_duration))
+
+TTL_duration = 0.1;
+call_inds = round(metadata.call_times*fs); % Indices of when USV starts
+
+TTL_inds = 1:round(TTL_duration*fs); % Indices of fixed duration for TTL
+TTL_inds = TTL_inds(:) + call_inds(:)'; % Add fixed duration TTL indices to all USV start indices
+TTL_inds = TTL_inds(:); % Reshape to row vector
+if any(TTL_inds>numel(audio))
+    error("There should not be TTL indices longer than the audio")
 end
 
-%load info files if needed 
-start_audio_info = load(fullfile(gen_audio_folder, start_audio_name + "_squeak_info.mat")).metadata;
-end_audio_info = load(fullfile(gen_audio_folder, end_audio_name + "_squeak_info.mat")).metadata;
-
-% % Offset = exact length of the starting audio file, in seconds
-% offset = size(audio_start, 1) / fs1;
-% 
-% % Shift the end audio file usv specific times 
-% end_audio_info.usv_duration = end_audio_info.usv_duration + offset;
-% end_audio_info.background_duration = end_audio_info.background_duration + offset;
-
-metadata = [start_audio_info;end_audio_info];
-metadata_pat = fullfile(gen_audio_folder, "happy_NAc_dlight_test_squeak_info.mat");
-save(metadata_pat, 'metadata');
-
-
-combined = [audio_start; audio_end];    % stack vertically = end to end
-audiowrite('happy_NAc_dlight_test.wav', combined, fs1);
+%%
+audio = bitset(audio, 1, 0); % Set 1st bit to 0 for all the audio
+audio(TTL_inds) = bitset(audio(TTL_inds), 1, 1); % Set the 1st bit to 1 for TTL indices
+%% Save the audio file
+audiowrite('happy_NAc_dlight_test.wav', audio, fs);
 
 
 
