@@ -6,8 +6,8 @@ gen_audio_folder = "/datastar/annaRemes/NAc_dlight/playback_audio/";
 file_name = "happy_NAc_dlight_test";
 
 %% Generate the rate shape of the audio
-rand_scale = 0;
-baseline_rate = 4.5;
+rand_scale = .2;
+baseline_rate = 4;
 
 [rate1, sr] = gen_decaying_rate( ...
     audio_duration = 3 * 60, ...
@@ -26,7 +26,7 @@ rate2 = gen_decaying_rate( ...
     );
 
 rate3 = gen_decaying_rate( ...
-    audio_duration = 3 * 60, ...
+    audio_duration = 33 * 60, ...
     baseline_rate = baseline_rate, ...
     time_constant = 15 * 60, ...
     decay_time_flipped = false, ...
@@ -45,7 +45,6 @@ ylabel('USV rate (Hz)')
 
 
 %% Generate audio using this rate shape
-fname = fullfile(gen_audio_folder,'happy_test_end');
 [audio, fs, metadata] = gen_audio_from_detections(high, background, rate);
 
 %% Save sync signal
@@ -63,11 +62,11 @@ if any(TTL_inds>numel(audio))
     error("There should not be TTL indices longer than the audio")
 end
 
-%%
 audio = bitset(audio, 1, 0); % Set 1st bit to 0 for all the audio
 audio(TTL_inds) = bitset(audio(TTL_inds), 1, 1); % Set the 1st bit to 1 for TTL indices
 %% Save the audio file
-audiowrite('happy_NAc_dlight_test.wav', audio, fs);
+fname = fullfile(gen_audio_folder,'happy_test.wav');
+audiowrite(fname, audio, fs);
 
 
 
